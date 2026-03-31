@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from app.core.logging import setup_logging
 from app.db.session import init_db
 from app.services.cache import cache_service
@@ -13,6 +14,14 @@ async def lifespan(app: FastAPI):
     await cache_service.close()
 
 app = FastAPI(title="VirusTotal Data Pipeline", version="1.0.0", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(domains.router, prefix="/api/v1/domains", tags=["domains"])
 app.include_router(ip_addresses.router, prefix="/api/v1/ips", tags=["ips"])
