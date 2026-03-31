@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vt-pipeline-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - VT_API_KEY=${VT_API_KEY}
+      - DATABASE_URL=sqlite+aiosqlite:///./virustotal.db
+      - CACHE_TTL_SECONDS=3600
+      - VT_RATE_LIMIT_RPM=4
+      - APP_ENV=production
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./virustotal.db:/app/virustotal.db
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: vt-pipeline-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
