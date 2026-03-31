@@ -1,58 +1,110 @@
-# VirusTotal Data Pipeline Challenge
+# 🛡️ VirusTotal Data Pipeline
 
-This is a data pipeline that fetches threat intelligence from the VirusTotal API v3, stores it in a relational database (SQLite/PostgreSQL), implements an efficient caching backplane, and exposes the data via a fast REST API alongside a beautiful React frontend dashboard.
+![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.111.0-009688.svg?style=flat&logo=FastAPI&logoColor=white)
+![React](https://img.shields.io/badge/React-18.x-61DAFB.svg?style=flat&logo=react&logoColor=black)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-## Features
-* **Data Ingestion**: Fetches API data asynchronously from VirusTotal.
-* **Caching Strategy**: 
-    1. **Primary Cache (In-Memory/Redis)**: Keeps ultra-fast lookups for frequently accessed indicators.
-    2. **Secondary Cache (Database)**: Persists data systematically with SQLAlchemy to minimize underlying VT API calls.
-* **REST API**: Built with FastAPI. Supports querying specific resource types and forced regeneration endpoints.
-* **Interactive React Dashboard**: A specialized glassmorphism-styled GUI built with Vite to visualize detection stats, lookup history, and cache sources efficiently.
+A high-performance, async data pipeline that orchestrates threat intelligence ingestion from the **VirusTotal API v3**. It features robust caching layers, safe API-rate limiting, relational persistence, and exposes a beautiful metrics dashboard built on Vite + React.
 
-## Prerequisites
-* Python 3.9+ 
-* Node.js (v18+)
+---
 
-## Setup
-1. Clone the repository / initialize the project environment:
-    ```bash
-    python3 -m venv venv
-    source venv/bin/activate
-    pip install -r requirements.txt
-    pip install greenlet # needed for async DB connections
-    ```
+## ⚡ Features & Capabilities
 
-2. Generate API Key:
-    * Go to VirusTotal and create a free account.
-    * Once logged in, navigate to your API Key under the profile section. Copy it.
+- **Automated Threat Intelligence**: Smart indicator ingestion tailored for `domains`, `IPs`, and `file hashes`.
+- **Advanced Rate Management**: Token-bucket async rate limiter natively enforces VT's strict quota (4 req/min) without randomly dropping user queries.
+- **Smart 3-Tier Architecture**:
+  1. **L1 Memory/Redis Cache**: Ultra-fast initial responses.
+  2. **L2 Database Cache**: SQLAlchemy + SQLite persistence indefinitely holds historic queries to save VT API cycles.
+  3. **L3 Upstream Fetch**: Direct API polling over `httpx` logic fallback.
+- **Dynamic React Flow GUI**: Modern visualization of threat breakdowns (Malicious, Suspicious, Harmless) featuring pure CSS layouts and glassmorphism styling.
 
-3. Complete `.env` configuration:
-    ```bash
-    cp .env.example .env
-    ```
-    Edit `.env` and replace the placeholder value with your actual VirusTotal API key.
+## 🏗️ System Architecture Flow
 
-## Usage
-Start the Uvicorn standalone ASGI server to run the backend API locally:
+```mermaid
+sequenceDiagram
+    participant UI as React Dashboard
+    participant API as FastAPI Backend
+    participant L1 as Memory/Redis Cache
+    participant L2 as SQLite Database
+    participant VT as VirusTotal API
 
+    UI->>API: GET /api/v1/ips/1.1.1.1
+    API->>L1: Check Fast Cache
+    alt Cache Hit
+        L1-->>API: Return Source: Cache
+    else Cache Miss
+        API->>L2: Check Relational DB
+        alt DB Hit
+            L2-->>API: Restore Data
+            API->>L1: Repopulate Fast Cache
+            API-->>UI: Return Source: Database
+        else DB Miss
+            API->>VT: Fetch live intel
+            VT-->>API: JSON Response
+            API->>L2: Async UPSERT persist
+            API->>L1: Cache response
+            API-->>UI: Return Source: VirusTotal
+        end
+    end
+```
+
+## 📋 Prerequisites
+* **Python 3.9+**
+* **Node.js 18+**
+
+## 🚀 Quick Setup Guide
+
+### 1. Initialize the Core Backend
 ```bash
+git clone https://github.com/ShachiMistry/VirusTotal-Data-Pipeline.git
+cd VirusTotal-Data-Pipeline
+
+# Spin up environment
+python3 -m venv venv
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+pip install greenlet
+```
+
+### 2. Configure Your Environment
+Establish the proper pipeline connections by copying the example environment format.
+```bash
+cp .env.example .env
+```
+_Edit the newly created `.env` file and enforce the `VT_API_KEY` placeholder with your active VirusTotal Developer Key._
+
+### 3. Start the Services
+Run the following in two separate terminal instances to boot both the API router and the graphical dashboard interface.
+
+**Terminal 1 — FastAPI Server:**
+```bash
+source venv/bin/activate
 uvicorn main:app --reload
 ```
-Then visit `http://127.0.0.1:8000/docs` in your browser to access the interactive Swagger API docs where you can test the APIs (or easily send CURL requests).
+_Your Swagger docs are now alive at `http://127.0.0.1:8000/docs`_
 
-### React Frontend Dashboard
-To launch the interactive user interface, open a second terminal window and run:
+**Terminal 2 — React Dashboard Server:**
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-Then visit `http://localhost:5173/` in your browser to access the metrics dashboard and effortlessly lookup domains, IPs, and file hashes!
+_Launch your frontend interface at `http://localhost:5173/`_
 
-### Endpoints
-* `GET /api/v1/domains/{domain}`: Lookup reputation tracking for isolated domains.
-* `GET /api/v1/ips/{ip}`: Retrieve Autonomous System (ASN) origins and IP routing history.
-* `GET /api/v1/files/{hash}`: Fetch matching SHA-256 analysis records and metadata.
-    * All endpoints return data based on the optimal cache source (`cache`, `database`, or direct `virustotal` query).
-    * Pass the `?refresh=true` query parameter to bypass caching mechanisms completely and forcefully fetch upstream data.
+---
+
+## 🔌 Core API Routes
+
+All endpoints natively resolve the optimal caching sequence before invoking the external VT Network APIs. 
+
+| Method | Component URI | Operation Details |
+| :--- | :--- | :--- |
+| `GET` | `/api/v1/domains/{domain}` | Extract safety metrics for tracked URLs. |
+| `GET` | `/api/v1/ips/{ip}` | Aggregate global ASN nodes and malware routing. |
+| `GET` | `/api/v1/files/{hash}` | Parse SHA-256 analysis records and classifications. |
+| `GET` | `/health` | Diagnostic polling block for monitoring load-balancers. |
+
+_Note: You can pass the `?refresh=true` logical argument on any pipeline endpoint to actively bypass the Cache & Database mechanisms and force a raw upstream request!_
