@@ -92,7 +92,35 @@ cd frontend
 npm install
 npm run dev
 ```
-_Launch your frontend interface at `http://localhost:5173/`_
+## 🐳 Docker Deployment (Recommended)
+
+The easiest way to run the entire pipeline (Backend, Frontend, and Redis) is using Docker Compose.
+
+```bash
+# Ensure you have a .env file with your VT_API_KEY
+docker compose up -d --build
+```
+_The dashboard will be available at `http://localhost:80`_
+
+---
+
+## ☁️ AWS EC2 Deployment
+
+We provide automated scripts to deploy this pipeline to an Amazon Linux 2023 instance.
+
+### 1. Prepare your EC2 Instance
+Run the setup script on your server to install Docker and system dependencies:
+```bash
+# From your local machine, copy and run the setup
+scp -i your-key.pem aws/setup_ec2.sh ec2-user@your-instance-ip:~/
+ssh -i your-key.pem ec2-user@your-instance-ip "chmod +x setup_ec2.sh && ./setup_ec2.sh"
+```
+
+### 2. Deploy the Pipeline
+Use the deployment helper to sync your local code and restart containers:
+```bash
+./aws/deploy_to_ec2.sh your-key.pem
+```
 
 ---
 
@@ -105,6 +133,11 @@ All endpoints natively resolve the optimal caching sequence before invoking the 
 | `GET` | `/api/v1/domains/{domain}` | Extract safety metrics for tracked URLs. |
 | `GET` | `/api/v1/ips/{ip}` | Aggregate global ASN nodes and malware routing. |
 | `GET` | `/api/v1/files/{hash}` | Parse SHA-256 analysis records and classifications. |
-| `GET` | `/health` | Diagnostic polling block for monitoring load-balancers. |
+| `GET` | `/api/health` | Diagnostic polling block for monitoring. |
 
 _Note: You can pass the `?refresh=true` logical argument on any pipeline endpoint to actively bypass the Cache & Database mechanisms and force a raw upstream request!_
+
+---
+
+## 📜 License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
