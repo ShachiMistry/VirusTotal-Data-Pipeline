@@ -117,10 +117,18 @@ ssh -i your-key.pem ec2-user@your-instance-ip "chmod +x setup_ec2.sh && ./setup_
 ```
 
 ### 2. Deploy the Pipeline
-Use the deployment helper to sync your local code and restart containers:
+Use the deployment helper to sync your local code. The IP address is optional; if omitted, it defaults to the last configured server.
+
 ```bash
+# Option A: Use default IP
 ./aws/deploy_to_ec2.sh your-key.pem
+
+# Option B: Use a new/changed IP (e.g., after a restart)
+./aws/deploy_to_ec2.sh your-key.pem 54.x.x.x
 ```
+
+> [!TIP]
+> **Avoid IP Changes**: To keep your IP stable forever, allocate an **Elastic IP** in the AWS Console and attach it to your instance. This ensures you never have to change your deployment command or dashboard URL!
 
 ---
 
