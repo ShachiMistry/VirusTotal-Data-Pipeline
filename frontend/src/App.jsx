@@ -1,7 +1,11 @@
 import { useState } from 'react'
 import './App.css'
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
+// In production (ECS + ALB): ALB routes /api/* to backend, /* to frontend.
+// So relative /api/v1 works transparently from the browser.
+// For local dev without Docker: set VITE_API_BASE_URL=http://localhost:8000/api/v1 in frontend/.env.development.local
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "/api/v1";
+
 
 function App() {
   const [activeTab, setActiveTab] = useState("domains");

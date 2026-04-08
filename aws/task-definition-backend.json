@@ -1,0 +1,68 @@
+{
+  "family": "vt-pipeline-backend",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::ACCOUNT_ID:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::ACCOUNT_ID:role/ecsTaskRole",
+  "volumes": [
+    {
+      "name": "virustotal-efs",
+      "efsVolumeConfiguration": {
+        "fileSystemId": "EFS_FILE_SYSTEM_ID",
+        "rootDirectory": "/",
+        "transitEncryption": "ENABLED"
+      }
+    }
+  ],
+  "containerDefinitions": [
+    {
+      "name": "backend",
+      "image": "ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/virustotal-pipeline/backend:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "mountPoints": [
+        {
+          "sourceVolume": "virustotal-efs",
+          "containerPath": "/app/data",
+          "readOnly": false
+        }
+      ],
+      "environment": [
+        { "name": "DATABASE_URL",       "value": "sqlite+aiosqlite:////app/data/virustotal.db" },
+        { "name": "CACHE_TTL_SECONDS",  "value": "3600" },
+        { "name": "VT_RATE_LIMIT_RPM",  "value": "4" },
+        { "name": "APP_ENV",            "value": "production" },
+        { "name": "LOG_LEVEL",          "value": "INFO" },
+        { "name": "CORS_ORIGINS",       "value": "*" }
+      ],
+      "secrets": [
+        {
+          "name": "VT_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:virustotal/api-key"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/vt-pipeline-backend",
+          "awslogs-region": "REGION",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      }
+    }
+  ]
+}

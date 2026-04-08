@@ -1,5 +1,6 @@
 import json
 import time
+from datetime import datetime, date
 from typing import Optional
 import redis.asyncio as redis
 from app.core.config import get_settings
@@ -14,7 +15,12 @@ class _RedisCache:
         return json.loads(val) if val else None
 
     async def set(self, key: str, value: dict) -> None:
-        await self.redis.set(key, json.dumps(value), ex=self.ttl)
+        def json_serial(obj):
+            if isinstance(obj, (datetime, date)):
+                return obj.isoformat()
+            raise TypeError(f"Type {type(obj)} not serializable")
+
+        await self.redis.set(key, json.dumps(value, default=json_serial), ex=self.ttl)
 
     async def delete(self, key: str) -> None:
         await self.redis.delete(key)

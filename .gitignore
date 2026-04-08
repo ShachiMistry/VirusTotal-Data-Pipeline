@@ -4,3 +4,17 @@ __pycache__/
 .env
 sql_app.db
 virustotal.db
+
+# Node / frontend
+node_modules/
+frontend/dist/
+
+# IDE
+.vscode/
+.idea/
+
+# Test cache
+.pytest_cache/
+
+# Private Keys
+*.pem
