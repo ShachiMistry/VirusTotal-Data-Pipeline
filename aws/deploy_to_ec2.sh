@@ -10,7 +10,8 @@
 set -e
 
 KEY_FILE=$1
-EC2_IP="44.222.171.147" # Based on your screenshot
+# Priority: 1. Command-line arg, 2. Env var, 3. Hardcoded default
+EC2_IP=${2:-${EC2_IP:-"44.222.171.147"}}
 EC2_USER="ec2-user"
 REMOTE_PATH="~/virustotal-pipeline"
 
